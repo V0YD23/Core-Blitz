@@ -218,9 +218,11 @@ function initGame() {
     initBoard();
     newPiece();
 
+    // Fetch level from localStorage or default to 1
+    level = localStorage.getItem("currentLevel") ? Number(localStorage.getItem("currentLevel")) : 1;
     score = 0;
-    level = 1;
     dropInterval = 1000;
+
     scoreDisplay.textContent = score;
     levelDisplay.textContent = level;
     clearTimeout(dropTimer);

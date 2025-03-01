@@ -2,11 +2,11 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ethers, BrowserProvider, Contract } from "ethers";
-import { Loader2, Gamepad, AlertCircle } from "lucide-react";
+import { Loader2,AlertCircle } from "lucide-react";
 import { Staking } from "@/abi/staking";
-import { startTetrisGame } from "@/utils/game";
 import { useRouter } from "next/navigation";
 import { uploadToIPFS } from "@/utils/ipfsUpload";
+import {NFT} from "@/abi/nft"
 interface TetrisHomePageProps {}
 
 interface WalletInfo {
@@ -16,11 +16,18 @@ interface WalletInfo {
 
 const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
   const router = useRouter();
+  const NFT_CONTRACT_ABI = NFT;
+  const NFT_CONTRACT_ADDRESS: string = process.env.NEXT_PUBLIC_NFT_ADDRESS || "";
   const STAKING_CONTRACT_ADDRESS: string =
     process.env.NEXT_PUBLIC_STAKING || "";
   const api: string = process.env.NEXT_PUBLIC_BACKEND_API || "";
   const [isWalletConnected, setIsWalletConnected] = useState<boolean>(false);
-  const [currentLevel, setCurrentLevel] = useState(1);
+  const [currentLevel, setCurrentLevel] = useState(() => {
+    if (typeof window !== "undefined") {
+      return Number(localStorage.getItem("currentLevel")) || 1;
+    }
+    return 1;
+  });
   const [isCalculatingProfit, setIsCalculatingProfit] = useState(false);
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(() => {
     // Fetch from localStorage on initial render
@@ -43,6 +50,7 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
   const [blockId, setBlockId] = useState<number>(0);
   const [contract, setContract] = useState<Contract>();
   const [provider, setProvider] = useState<BrowserProvider | undefined>();
+  const [nftContract, setNftContract] = useState<Contract>();
   const [error, setError] = useState("");
   const [estimatedProfit, setEstimatedProfit] = useState(0);
   const [expectedScore, setExpectedScore] = useState<string>(
@@ -71,7 +79,7 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
     }
 
     try {
-      // setIsLoading(true);
+
       setError("");
 
       const response = await fetch(
@@ -87,13 +95,18 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
       setgameScore(score);
       console.log(score);
 
+      // Call the function (since it's view, no gas is needed)
+      const targetScore = await contract.getTargetSet(walletInfo?.address);
+
+      
       const tx = await contract.withdraw(score);
       await tx.wait();
 
 
-      const gameWon = score >= expectedScore ? 1:0;
+      const gameWon = score >= targetScore ? 1:0;
       console.log(score, gameWon, walletInfo?.address);
 
+      if(!gameWon) throw new Error("Failed to End Game");
       const gameEndResponse = await fetch(`${api}/api/User/game-end`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -139,8 +152,8 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
         setIsStaking(false);
         setStakeInput("");
 
-        // const tx = await nftContract?.mintLevelNFT(address, lev, hash);
-        // await tx.wait();
+        const tx = await nftContract?.mintLevelNFT(walletInfo?.address, lev, hash);
+        await tx.wait();
 
         const res = await fetch(`${api}/api/reset-score`, {
           method: "POST",
@@ -181,7 +194,11 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
       localStorage.removeItem("walletInfo");
     }
   }, [walletInfo]); // Update localStorage whenever walletInfo changes
-
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("currentLevel", currentLevel.toString());
+    }
+  }, [currentLevel]);
   const fetchStakedBalance = async (
     contractInstance: ethers.Contract,
     userAddress: string
@@ -294,6 +311,13 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
           signer
         );
         setContract(stakingContract);
+
+        const nftContract = new ethers.Contract(
+          NFT_CONTRACT_ADDRESS,
+          NFT_CONTRACT_ABI,
+          signer
+        );
+        setNftContract(nftContract);
 
         await fetchStakedBalance(stakingContract, userAddress);
 
@@ -866,44 +890,14 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
                         readOnly
                         placeholder="Score of the Played Game"
                         className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        // step="0.001"
                         min="0"
-                        // max={walletInfo?.balance || 0}
                       />
                       <motion.button
                         className="bg-gradient-to-r from-purple-500 to-pink-600 px-6 py-3 rounded-lg font-bold hover:from-purple-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         onClick={handleWithdraw}
                         disabled={!gameEnded || Number(gameScore) < 0}
-                        // whileHover={{ scale: 1.05 }}
-                        // whileTap={{ scale: 0.95 }}
                       >
-                        {/* {isStaking ? (
-                          <span className="flex items-center">
-                            <svg
-                              className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              ></circle>
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              ></path>
-                            </svg>
-                            Staking...
-                          </span>
-                        ) : ( */}
                           Withdraw
-                        {/* )} */}
                       </motion.button>
                     </div>
 
