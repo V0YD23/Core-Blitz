@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris - Gaming Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #0a0a14;
+            color: #00f0ff;
+            font-family: 'Chakra Petch', sans-serif;
+            overflow: hidden;
+            position: relative;
+            background-image: 
+                radial-gradient(circle at 30% 30%, rgba(0, 128, 255, 0.08), transparent 35%),
+                radial-gradient(circle at 70% 70%, rgba(0, 255, 200, 0.08), transparent 35%);
+        }
+
+        /* Subtle grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 100, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 100, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            background: #111126;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+            border: 1px solid #2a2a4a;
+        }
+
+        #board {
+            border: 3px solid #2a2a4a;
+            background-color: rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 10px rgba(0, 100, 255, 0.3);
+            border-radius: 5px;
+            position: relative;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            justify-content: space-between;
+            min-width: 250px;
+        }
+
+        .game-title {
+            font-family: 'Press Start 2P', cursive;
+            text-align: center;
+            font-size: 1.3em;
+            text-transform: uppercase;
+            color: #00ddff;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 0px #001933;
+        }
+
+        .dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .score-level {
+            background: #192233;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: left;
+            border-left: 4px solid #00aaff;
+        }
+
+        .score-level p {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 1em;
+            letter-spacing: 1px;
+        }
+
+        .score-level span {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .next-piece {
+            background: #192233;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #00ccaa;
+        }
+
+        .next-piece h3 {
+            margin-bottom: 10px;
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .next-display {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 2px solid #2a2a4a;
+            border-radius: 5px;
+        }
+
+        .controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 15px;
+            background: #2a2a4a;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: 'Chakra Petch', sans-serif;
+            font-size: 0.9em;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            border-bottom: 3px solid rgba(0, 0, 0, 0.3);
+        }
+
+        button:hover {
+            background: #3a3a6a;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+            border-bottom-width: 1px;
+        }
+
+        #start {
+            background: #19512c;
+            grid-column: span 2;
+            border-bottom: 3px solid rgba(0, 0, 0, 0.3);
+        }
+
+        #start:hover {
+            background: #23703d;
+        }
+
+        .directional-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 5px;
+        }
+
+        .dir-button {
+            padding: 8px;
+            text-align: center;
+            border-radius: 5px;
+            font-size: 0.9em;
+            background: #2a2a4a;
+            border-bottom: 3px solid rgba(0, 0, 0, 0.3);
+        }
+
+        .dir-button:hover {
+            background: #3a3a6a;
+        }
+
+        .dir-button:nth-child(2) {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .dir-button:nth-child(1) {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .dir-button:nth-child(3) {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .dir-button:nth-child(4) {
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+        /* Game board highlight */
+        .board-container {
+            position: relative;
+        }
+
+        .board-container::after {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border: 1px solid rgba(0, 170, 255, 0.3);
+            border-radius: 7px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Key controls legend */
+        .key-controls {
+            background: #192233;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.85em;
+            border-left: 4px solid #aa55ff;
+        }
+
+        .key-controls h3 {
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .key-controls ul {
+            list-style: none;
+            padding-left: 5px;
+        }
+
+        .key-controls li {
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .key-controls .key {
+            background: #2a2a4a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+                padding: 20px;
+                gap: 20px;
+            }
+
+            #board {
+                width: 250px !important;
+                height: 500px !important;
+            }
+
+            .controls {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="board-container">
+            <canvas id="board" width="300" height="600"></canvas>
+        </div>
+        <div class="controls">
+            <div class="game-title">Tetris Gaming</div>
+            
+            <div class="dashboard">
+                <div class="score-level">
+                    <p>SCORE: <span id="score">0</span></p>
+                    <p>LEVEL: <span id="level">1</span></p>
+                    <p>LINES: <span id="lines">0</span></p>
+                </div>
+                
+                <div class="next-piece">
+                    <h3>NEXT PIECE</h3>
+                    <div class="next-display" id="next-piece"></div>
+                </div>
+            </div>
+            
+            <div class="controls-section">
+                <div class="button-group">
+                    <button id="start">START GAME</button>
+                    <button id="rotate">ROTATE</button>
+                    <button id="pause">PAUSE</button>
+                </div>
+                
+                <div class="directional-controls">
+                    <button class="dir-button" id="left">←</button>
+                    <button class="dir-button" id="up">↑</button>
+                    <button class="dir-button" id="right">→</button>
+                    <button class="dir-button" id="down">↓</button>
+                </div>
+                
+                <div class="key-controls">
+                    <h3>Keyboard Controls</h3>
+                    <ul>
+                        <li><span>Move Left</span> <span class="key">←</span></li>
+                        <li><span>Move Right</span> <span class="key">→</span></li>
+                        <li><span>Move Down</span> <span class="key">↓</span></li>
+                        <li><span>Rotate</span> <span class="key">↑</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script>
+        // This script connects directional buttons to keyboard events
+        document.addEventListener('DOMContentLoaded', function() {
+            // Connect directional buttons to keyboard events
+            document.getElementById('left').addEventListener('click', function() {
+                simulateKeyEvent(37); // Left arrow key
+            });
+            
+            document.getElementById('up').addEventListener('click', function() {
+                simulateKeyEvent(38); // Up arrow key
+            });
+            
+            document.getElementById('right').addEventListener('click', function() {
+                simulateKeyEvent(39); // Right arrow key
+            });
+            
+            document.getElementById('down').addEventListener('click', function() {
+                simulateKeyEvent(40); // Down arrow key
+            });
+            
+            // Connect pause button if it exists in your game
+            if(document.getElementById('pause')) {
+                document.getElementById('pause').addEventListener('click', function() {
+                    simulateKeyEvent(80); // 'P' key
+                });
+            }
+            
+            // This function simulates a keyboard event
+            function simulateKeyEvent(keyCode) {
+                const event = new KeyboardEvent('keydown', {
+                    'keyCode': keyCode,
+                    'which': keyCode
+                });
+                document.dispatchEvent(event);
+            }
+            
+            // Initialize the lines counter if needed
+            if(!document.getElementById('lines').textContent) {
+                document.getElementById('lines').textContent = '0';
+            }
+        });
+    </script>
+</body>
+</html>
