@@ -30,6 +30,13 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
   const [stakedAmount, setStakedAmount] = useState<number>(0);
   const [isStaking, setIsStaking] = useState<boolean>(false);
   const [stakeInput, setStakeInput] = useState<string>("0");
+  const [gameEnded, setGameEnded] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return Boolean(localStorage.getItem("gameEnded"));
+    }
+    return false;
+  });
+  
   const [fallingBlocks, setFallingBlocks] = useState<
     Array<{ id: number; x: number; y: number; color: string }>
   >([]);
@@ -156,6 +163,7 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
         // );
 
         // handleLevelComplete();
+        setGameEnded(false)
       }
     } catch (error) {
 
@@ -220,6 +228,13 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
   useEffect(() => {
     localStorage.setItem("gameScore", gameScore.toString());
   }, [gameScore]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("gameEnded", gameEnded.toString());
+    }
+  }, [gameEnded]);
+  
   useEffect(() => {
     // Save expected score to localStorage whenever it changes
     if (typeof window !== "undefined" && expectedScore) {
@@ -230,7 +245,7 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
   useEffect(() => {
     if (localStorage.getItem("gameOver") === "true") {
       console.log("Game Over detected. Restarting game...");
-
+      setGameEnded(true)
 
       fetchGameScore()
       fetchCurrentlevel()
@@ -858,7 +873,7 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
                       <motion.button
                         className="bg-gradient-to-r from-purple-500 to-pink-600 px-6 py-3 rounded-lg font-bold hover:from-purple-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         onClick={handleWithdraw}
-                        disabled={!gameScore || Number(gameScore) <= 0}
+                        disabled={!gameEnded || Number(gameScore) < 0}
                         // whileHover={{ scale: 1.05 }}
                         // whileTap={{ scale: 0.95 }}
                       >
