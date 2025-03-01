@@ -6,6 +6,7 @@ import { Loader2, Gamepad, AlertCircle } from "lucide-react";
 import { Staking } from "@/abi/staking";
 import { startTetrisGame } from "@/utils/game";
 import { useRouter } from "next/navigation";
+import { uploadToIPFS } from "@/utils/ipfsUpload";
 interface TetrisHomePageProps {}
 
 interface WalletInfo {
@@ -18,13 +19,8 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
   const STAKING_CONTRACT_ADDRESS: string =
     process.env.NEXT_PUBLIC_STAKING || "";
   const api: string = process.env.NEXT_PUBLIC_BACKEND_API || "";
-  const [isWalletConnected, setIsWalletConnected] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return JSON.parse(localStorage.getItem("isWalletConnected") || "false");
-    }
-    return false;
-  });
-  
+  const [isWalletConnected, setIsWalletConnected] = useState<boolean>(false);
+  const [currentLevel, setCurrentLevel] = useState(1);
   const [isCalculatingProfit, setIsCalculatingProfit] = useState(false);
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(() => {
     // Fetch from localStorage on initial render
@@ -48,7 +44,10 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
         localStorage.getItem("expectedScore")) ||
       "0"
   );
-
+  const [gameScore, setgameScore] = useState(
+    () =>
+      (typeof window !== "undefined" && localStorage.getItem("gameScore")) || ""
+  );
   const restartGame = () => {
     setShowProfitEstimate(false)
     setIsCalculatingProfit(false)
@@ -57,6 +56,113 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
     setEstimatedProfit(0)
     setExpectedScore("0")
     // Add any other game state resets here
+  };
+  const handleWithdraw = async () => {
+    if (!contract) {
+      setError("Please connect wallet first");
+      return;
+    }
+
+    try {
+      // setIsLoading(true);
+      setError("");
+
+      const response = await fetch(
+        `${api}/api/message?publicKey=${encodeURIComponent(walletInfo?.address || "")}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const data = await response.json();
+      const score = data.score;
+      setgameScore(score);
+      console.log(score);
+
+      const tx = await contract.withdraw(score);
+      await tx.wait();
+
+
+      const gameWon = score >= expectedScore ? 1:0;
+      console.log(score, gameWon, walletInfo?.address);
+
+      const gameEndResponse = await fetch(`${api}/api/User/game-end`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          score: score,
+          won: gameWon,
+          publicKey: walletInfo?.address,
+        }),
+      });
+
+      if (!gameEndResponse.ok) throw new Error("Failed to End Game");
+
+
+      if (gameWon) {
+        const resp = await fetch(
+          `${api}/api/User/current-level?publicKey=${walletInfo?.address}`
+        );
+        const temp = await resp.json();
+        const lev = temp.level;
+        console.log("level " + lev);
+        setCurrentLevel(lev);
+
+        const response = await fetch(`${api}/generate-metadata-nft`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            publicKey: walletInfo?.address,
+            score: score,
+            level: lev - 1,
+          }),
+        });
+
+        if (!response.ok) throw new Error("Failed to generate metadata");
+        const { metadata } = await response.json();
+
+        if (!metadata) throw new Error("Received null metadata");
+
+        const hash = await uploadToIPFS(metadata);
+        if (!hash) throw new Error("Failed to upload metadata to IPFS");
+
+        await fetchStakedBalance(contract, walletInfo?.address || "");
+        setgameScore("");
+        setIsStaking(false);
+        setStakeInput("");
+
+        // const tx = await nftContract?.mintLevelNFT(address, lev, hash);
+        // await tx.wait();
+
+        const res = await fetch(`${api}/api/reset-score`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ publicKey: walletInfo?.address }),
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch proof");
+
+        // Show NFT mint success toast
+        // toast.custom(
+        //   (t: any) => (
+        //     <div className={`${t.visible ? "animate-enter" : "animate-leave"}`}>
+        //       <NFTMintSuccessToast level={lev - 1} />
+        //     </div>
+        //   ),
+        //   {
+        //     duration: 5000,
+        //   }
+        // );
+
+        // handleLevelComplete();
+      }
+    } catch (error) {
+
+      setError("Withdrawal failed: " + (error as Error).message);
+    } finally {
+      // setIsLoading(false);
+    }
   };
 
   const [showProfitEstimate, setShowProfitEstimate] = useState(false);
@@ -87,14 +193,33 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
       setError("Failed to fetch staked balance: " + (error as Error).message);
     }
   };
+  const fetchGameScore = async () => {
+    try {
+      const response = await fetch(`${api}/api/message?publicKey=${walletInfo?.address}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
 
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+
+      const data = await response.json();
+      setgameScore(data.score.toString());
+
+      console.log(data);
+    } catch (error) {
+      console.error("Failed to fetch User's Game Score:", error);
+    }
+  };
   // Sync isWalletConnected state to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("isWalletConnected", JSON.stringify(isWalletConnected));
     }
   }, [isWalletConnected]);
-  
+  useEffect(() => {
+    localStorage.setItem("gameScore", gameScore.toString());
+  }, [gameScore]);
   useEffect(() => {
     // Save expected score to localStorage whenever it changes
     if (typeof window !== "undefined" && expectedScore) {
@@ -105,12 +230,22 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
   useEffect(() => {
     if (localStorage.getItem("gameOver") === "true") {
       console.log("Game Over detected. Restarting game...");
-      localStorage.removeItem("gameOver"); // Clear game over status
-      restartGame(); // Reinitialize variables
+
+
+      fetchGameScore()
+      fetchCurrentlevel()
     }
   }, []);
 
-
+  const fetchCurrentlevel = async()=>{
+    const resp = await fetch(
+      `${api}/api/User/current-level?publicKey=${walletInfo?.address}`
+    );
+    const temp = await resp.json();
+    const lev = temp.level;
+    console.log("level " + lev);
+    setCurrentLevel(lev);
+  }
 
   useEffect(() => {
     if (
@@ -523,7 +658,7 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
                     : "bg-gray-700 text-gray-400 cursor-not-allowed"
                 }`}
               disabled={stakedAmount <= 0}
-              onClick={() => router.push("/game/index.html")}
+              onClick={() => router.push(`/game/index.html?level=${currentLevel}`)}
               whileHover={stakedAmount > 0 ? { scale: 1.05 } : {}}
               whileTap={stakedAmount > 0 ? { scale: 0.95 } : {}}
             >
@@ -704,7 +839,74 @@ const TetrisHomePage: React.FC<TetrisHomePageProps> = () => {
                       </div>
                     )}
                   </div>
+                  <div className="mt-6">
+                    <label className="block text-gray-300 mb-2">
+                      Score of Game
+                    </label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="number"
+                        value={gameScore}
+                        // onChange={(e) => setStakeInput(e.target.value)}
+                        readOnly
+                        placeholder="Score of the Played Game"
+                        className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        // step="0.001"
+                        min="0"
+                        // max={walletInfo?.balance || 0}
+                      />
+                      <motion.button
+                        className="bg-gradient-to-r from-purple-500 to-pink-600 px-6 py-3 rounded-lg font-bold hover:from-purple-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        onClick={handleWithdraw}
+                        disabled={!gameScore || Number(gameScore) <= 0}
+                        // whileHover={{ scale: 1.05 }}
+                        // whileTap={{ scale: 0.95 }}
+                      >
+                        {/* {isStaking ? (
+                          <span className="flex items-center">
+                            <svg
+                              className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Staking...
+                          </span>
+                        ) : ( */}
+                          Withdraw
+                        {/* )} */}
+                      </motion.button>
+                    </div>
 
+                    {/* Validation error messages */}
+                    {walletInfo &&
+                      parseFloat(stakeInput) > walletInfo.balance && (
+                        <p className="text-red-500 mt-2">
+                          Insufficient balance
+                        </p>
+                      )}
+
+                    {error && (
+                      <div className="flex items-center mt-2 text-red-500">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        <p>{error}</p>
+                      </div>
+                    )}
+                  </div>
                   {/* Profit Estimate Section */}
                   {showProfitEstimate && (
                     <motion.div
