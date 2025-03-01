@@ -47,6 +47,80 @@
             opacity: 0.3;
         }
 
+        /* Animated background tetris blocks */
+        .bg-tetris-block {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            z-index: -1;
+            opacity: 0.7;
+            border-radius: 2px;
+            box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+            animation: float 15s linear infinite;
+        }
+
+        /* Different shapes for tetris blocks */
+        .shape-I {
+            width: 80px;
+            height: 20px;
+        }
+
+        .shape-O {
+            width: 40px;
+            height: 40px;
+        }
+
+        .shape-T {
+            width: 60px;
+            height: 40px;
+            clip-path: polygon(33.33% 0%, 66.66% 0%, 66.66% 50%, 100% 50%, 100% 100%, 0% 100%, 0% 50%, 33.33% 50%);
+        }
+
+        .shape-L {
+            width: 60px;
+            height: 40px;
+            clip-path: polygon(0% 0%, 33.33% 0%, 33.33% 50%, 100% 50%, 100% 100%, 0% 100%);
+        }
+
+        .shape-J {
+            width: 60px;
+            height: 40px;
+            clip-path: polygon(66.66% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 50%, 66.66% 50%);
+        }
+
+        .shape-S {
+            width: 60px;
+            height: 40px;
+            clip-path: polygon(33.33% 0%, 100% 0%, 100% 50%, 66.66% 50%, 66.66% 100%, 0% 100%, 0% 50%, 33.33% 50%);
+        }
+
+        .shape-Z {
+            width: 60px;
+            height: 40px;
+            clip-path: polygon(0% 0%, 66.66% 0%, 66.66% 50%, 100% 50%, 100% 100%, 33.33% 100%, 33.33% 50%, 0% 50%);
+        }
+
+        /* Floating animation for background tetris blocks */
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+            }
+        }
+
+        /* Pulsing glow effect */
+        @keyframes pulse {
+            0%, 100% {
+                filter: brightness(1);
+            }
+            50% {
+                filter: brightness(1.5);
+            }
+        }
+
         .container {
             display: flex;
             gap: 30px;
@@ -56,6 +130,7 @@
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
             position: relative;
             border: 1px solid #2a2a4a;
+            z-index: 1;
         }
 
         #board {
@@ -297,6 +372,9 @@
     </style>
 </head>
 <body>
+    <!-- Add the animated Tetris blocks in the background -->
+    <div id="background-blocks"></div>
+    
     <div class="container">
         <div class="board-container">
             <canvas id="board" width="300" height="600"></canvas>
@@ -343,6 +421,7 @@
             </div>
         </div>
     </div>
+    
     <script src="script.js"></script>
     <script>
         // This script connects directional buttons to keyboard events
@@ -362,6 +441,11 @@
             
             document.getElementById('down').addEventListener('click', function() {
                 simulateKeyEvent(40); // Down arrow key
+            });
+            
+            // Connect rotate button to up arrow key
+            document.getElementById('rotate').addEventListener('click', function() {
+                simulateKeyEvent(38); // Up arrow key
             });
             
             // Connect pause button if it exists in your game
@@ -384,7 +468,50 @@
             if(!document.getElementById('lines').textContent) {
                 document.getElementById('lines').textContent = '0';
             }
+            
+            // Create animated background tetris blocks
+            createBackgroundBlocks();
         });
+        
+        // Function to create the animated background tetris blocks
+        function createBackgroundBlocks() {
+            const backgroundContainer = document.getElementById('background-blocks');
+            const shapes = ['shape-I', 'shape-O', 'shape-T', 'shape-L', 'shape-J', 'shape-S', 'shape-Z'];
+            const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FF8800', '#8800FF'];
+            
+            // Create 30 random tetris blocks in the background
+            for (let i = 0; i < 30; i++) {
+                const block = document.createElement('div');
+                block.classList.add('bg-tetris-block');
+                
+                // Add random shape class
+                const randomShape = shapes[Math.floor(Math.random() * shapes.length)];
+                block.classList.add(randomShape);
+                
+                // Set random color
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                block.style.color = randomColor;
+                
+                // Set random position
+                const randomX = Math.floor(Math.random() * window.innerWidth);
+                block.style.left = `${randomX}px`;
+                
+                // Set random animation duration
+                const randomDuration = 15 + Math.random() * 20;
+                block.style.animationDuration = `${randomDuration}s`;
+                
+                // Set random delay
+                const randomDelay = Math.random() * 15;
+                block.style.animationDelay = `${randomDelay}s`;
+                
+                // Add pulsing glow effect with random duration
+                const pulseAnimation = `pulse ${3 + Math.random() * 5}s infinite alternate`;
+                block.style.animation = `${block.style.animation}, ${pulseAnimation}`;
+                
+                // Add to background container
+                backgroundContainer.appendChild(block);
+            }
+        }
     </script>
 </body>
 </html>
