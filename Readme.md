@@ -91,6 +91,11 @@ This project is open-source under the **MIT License**.
 
 For any queries, reach out via [email/contact link].
 
-```
+**Future Enhancements Explained**:
 
-You can replace `[email/contact link]` with your actual contact information. Let me know if you need any modifications! 🚀 
+- **NFT-Based Block Skins**: By integrating non-fungible tokens (NFTs), players can purchase and own unique block skins, enhancing personalization. This approach has been adopted in games like *Doctor Who: Worlds Apart*, where digital cards are tokenized as NFTs, allowing players to own and trade unique items. :contentReference[oaicite:0]{index=0}
+
+- **Tournament Mode**: Implementing a tournament system can boost player engagement by offering competitive play and exclusive rewards. Games such as *Legends of Elysium* have incorporated seasonal events and tournaments, allowing players to compete for rare cards and tokens. :contentReference[oaicite:1]{index=1}
+
+
+```
