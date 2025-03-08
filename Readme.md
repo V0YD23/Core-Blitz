@@ -28,35 +28,69 @@ Core Blitz is an exciting **Tetris-style puzzle block game** built on **COREtoke
 - MetaMask 
 - COREtoken-compatible blockchain setup on the Wallet
 
-### Steps
-1. Clone the repository:
+
+## Setup
+
+To set up the project locally, follow these steps:
+
+1. **Clone the repository:**
+
    ```sh
-   git clone https://github.com/your-repo/core-blitz.git
-   cd core-blitz
+   git clone https://github.com/V0YD23/Core-Blitz.git
+   cd Core-Blitz
    ```
-2. Install dependencies:
+
+2. **Set up the frontend:**
+
+   Navigate to the `frontend` directory and install dependencies:
+
    ```sh
+   cd frontend
    npm install
    ```
-3. Start the development server:
+
+   Start the development server:
+
    ```sh
    npm run dev
    ```
-4. Open the game in your browser at `http://localhost:3000`
+
+   Open the game in your browser at `http://localhost:3000`.
+
+3. **Set up the backend:**
+
+   Open a new terminal window, navigate to the `backend` directory, and install dependencies:
+
+   ```sh
+   cd backend
+   npm install
+   ```
+
+   Start the backend server using `nodemon`:
+
+   ```sh
+   nodemon server.js
+   ```
 
 ## Smart Contract
+
 Core Blitz utilizes smart contracts for **reward distribution and game validation**. The contract ensures fairness and transparency for all players.
 
 ## Contributing
-We welcome contributions! If you’d like to improve Core Blitz, feel free to:
+
+We welcome contributions! If you'd like to improve Core Blitz, feel free to:
+
 - Submit issues & feature requests
 - Create pull requests
 
 ## License
+
 This project is open-source under the **MIT License**.
 
 ## Contact
+
 For any queries, reach out via [email/contact link].
+
 ```
 
-You can replace `"path/to/logo.png"` and `"path/to/architecture.png"` with actual image paths. Let me know if you need any modifications! 🚀
+You can replace `[email/contact link]` with your actual contact information. Let me know if you need any modifications! 🚀 
